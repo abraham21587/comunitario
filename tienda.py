@@ -51,20 +51,32 @@ if menu == "Registrar Cliente":
 
     if enviar:
         if nombre and telefono:
-            nuevo_id = 1 if df_clientes.empty else df_clientes["ID"].max() + 1
-            nuevo_cliente = pd.DataFrame([{
-                "ID": nuevo_id,
-                "NOMBRE Y APELLIDO COMPLETO": nombre,
-                "TIPO(1)": tipo,
-                "NUMERO": numero,
-                "TELEFONO CONTACTO": telefono,
-                "BARRIO Y/O DIRRECCION": barrio,
-                "COMUNA": comuna,
-                "DIAS QUE VINO": 0
-            }])
-            df_clientes = pd.concat([df_clientes, nuevo_cliente], ignore_index=True)
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente registrado correctamente.")
+            # Validaciones de duplicados
+            nombre_duplicado = nombre.strip().lower() in df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.strip().str.lower().values
+            numero_duplicado = numero.strip() in df_clientes["NUMERO"].astype(str).str.strip().values
+            telefono_duplicado = telefono.strip() in df_clientes["TELEFONO CONTACTO"].astype(str).str.strip().values
+
+            if nombre_duplicado:
+                st.error("❌ Ya existe un cliente con ese nombre.")
+            elif numero_duplicado:
+                st.error("❌ Ya existe un cliente con ese número de documento.")
+            elif telefono_duplicado:
+                st.error("❌ Ya existe un cliente con ese teléfono.")
+            else:
+                nuevo_id = 1 if df_clientes.empty else df_clientes["ID"].max() + 1
+                nuevo_cliente = pd.DataFrame([{
+                    "ID": nuevo_id,
+                    "NOMBRE Y APELLIDO COMPLETO": nombre,
+                    "TIPO(1)": tipo,
+                    "NUMERO": numero,
+                    "TELEFONO CONTACTO": telefono,
+                    "BARRIO Y/O DIRRECCION": barrio,
+                    "COMUNA": comuna,
+                    "DIAS QUE VINO": 0
+                }])
+                df_clientes = pd.concat([df_clientes, nuevo_cliente], ignore_index=True)
+                df_clientes.to_excel(archivo_clientes, index=False)
+                st.success("✅ Cliente registrado correctamente.")
         else:
             st.error("Por favor completa los campos obligatorios.")
 
@@ -76,7 +88,6 @@ if menu == "Registrar Cliente":
         else:
             st.subheader("📄 Lista de clientes")
             st.dataframe(df_clientes)
-
 
 # === REGISTRAR VENTA ===
 if menu == "Registrar Venta":
@@ -164,3 +175,4 @@ if menu == "Registrar Venta":
         st.dataframe(df_ventas)
         total_general = df_ventas["Total"].sum()
         st.success(f"🧾 Total acumulado: **${total_general:,.0f}**")
+
