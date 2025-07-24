@@ -2,7 +2,7 @@
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 # Archivos
@@ -46,19 +46,19 @@ if menu == "Registrar Cliente":
     with st.form("form_cliente"):
         nombre = st.text_input("Nombre y apellido completo")
         tipo = st.selectbox("Tipo de documento", ["CC", "TI"])
-        numero = st.text_input("Número")
-        telefono = st.text_input("Teléfono de contacto")
-        barrio = st.text_input("Barrio y/o dirección")
-        comuna = st.text_input("Comuna")
+        numero = st.text_input("Número") or "N/A"
+        telefono = st.text_input("Teléfono de contacto") or "N/A"
+        barrio = st.text_input("Barrio y/o dirección") or "N/A"
+        comuna = st.text_input("Comuna") or "N/A"
         enviar = st.form_submit_button("Guardar cliente")
 
     if enviar:
-        if nombre and telefono:
+        if nombre:
             if nombre.strip().lower() in df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.strip().str.lower().values:
                 st.error("❌ Ya existe un cliente con ese nombre.")
-            elif numero.strip() in df_clientes["NUMERO"].astype(str).str.strip().values:
+            elif numero.strip() != "N/A" and numero.strip() in df_clientes["NUMERO"].astype(str).str.strip().values:
                 st.error("❌ Ya existe un cliente con ese número.")
-            elif telefono.strip() in df_clientes["TELEFONO CONTACTO"].astype(str).str.strip().values:
+            elif telefono.strip() != "N/A" and telefono.strip() in df_clientes["TELEFONO CONTACTO"].astype(str).str.strip().values:
                 st.error("❌ Ya existe un cliente con ese teléfono.")
             else:
                 nuevo_id = 1 if df_clientes.empty else df_clientes["ID"].max() + 1
@@ -76,7 +76,7 @@ if menu == "Registrar Cliente":
                 guardar_clientes()
                 st.success("✅ Cliente registrado correctamente.")
         else:
-            st.error("Por favor completa los campos obligatorios.")
+            st.error("Por favor completa el nombre del cliente.")
 
     if st.button("📋 Mostrar clientes registrados"):
         st.dataframe(df_clientes)
@@ -124,59 +124,52 @@ elif menu == "Registrar Venta":
 
     st.markdown("---")
     st.subheader("🗑️ Eliminar Compra")
-    pedido_borrar = st.number_input("# de pedido a eliminar", min_value=1, step=1)
+    pedidos_disponibles = df_ventas["# de pedido"].tolist()
+    pedido_seleccionado = st.selectbox("Selecciona un pedido", pedidos_disponibles)
+    pedido_info = df_ventas[df_ventas["# de pedido"] == pedido_seleccionado]
+    st.write("Detalles del pedido:")
+    st.dataframe(pedido_info)
+
     if st.button("Eliminar compra"):
-        if pedido_borrar in df_ventas["# de pedido"].values:
-            df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_borrar]
-            guardar_ventas()
-            st.success("Compra eliminada correctamente.")
-        else:
-            st.error("No se encontró ese número de pedido.")
-
-# === ACTUALIZAR / ELIMINAR CLIENTE ===
-elif menu == "Actualizar / Eliminar Cliente":
-    st.title("✏️ Actualizar o Eliminar Cliente")
-    lista_clientes = df_clientes["NOMBRE Y APELLIDO COMPLETO"].tolist()
-    seleccionado = st.selectbox("Selecciona un cliente", lista_clientes)
-    idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccionado].index[0]
-
-    with st.form("form_edit"):
-        nombre = st.text_input("Nombre", df_clientes.loc[idx, "NOMBRE Y APELLIDO COMPLETO"])
-        numero = st.text_input("Número", df_clientes.loc[idx, "NUMERO"])
-        telefono = st.text_input("Teléfono", df_clientes.loc[idx, "TELEFONO CONTACTO"])
-        barrio = st.text_input("Dirección", df_clientes.loc[idx, "BARRIO Y/O DIRRECCION"])
-        comuna = st.text_input("Comuna", df_clientes.loc[idx, "COMUNA"])
-        actualizar = st.form_submit_button("Actualizar")
-
-    if actualizar:
-        df_clientes.loc[idx, ["NOMBRE Y APELLIDO COMPLETO", "NUMERO", "TELEFONO CONTACTO", "BARRIO Y/O DIRRECCION", "COMUNA"]] = [nombre, numero, telefono, barrio, comuna]
-        guardar_clientes()
-        st.success("✅ Cliente actualizado")
-
-    if st.button("Eliminar cliente"):
-        df_clientes = df_clientes.drop(idx).reset_index(drop=True)
-        guardar_clientes()
-        st.success("🗑️ Cliente eliminado")
+        df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_seleccionado]
+        guardar_ventas()
+        st.success("Compra eliminada correctamente.")
 
 # === RESUMEN DE VENTAS ===
 elif menu == "Resumen de Ventas":
-    st.title("📊 Resumen Total de Ventas")
-    if df_ventas.empty:
-        st.info("No hay ventas registradas.")
-    else:
-        st.dataframe(df_ventas)
-        st.metric("Total vendido", f"${df_ventas['Total'].sum():,.0f}")
-        st.bar_chart(df_ventas.groupby("Vendedor")["Total"].sum())
+    st.title("📊 Resumen de Ventas")
+    st.dataframe(df_ventas)
+    total_general = df_ventas["Total"].sum()
+    st.success(f"🧾 Total acumulado: ${total_general:,.0f}")
 
 # === PREMIOS ===
 elif menu == "Premios 🎁":
-    st.title("🎉 Clientes con Premios")
-    df_premios = df_clientes[df_clientes["DIAS QUE VINO"] >= 30].copy()
-    df_premios = df_premios.sort_values(by="DIAS QUE VINO", ascending=False)
+    st.title("🎁 Clientes Premiados por Asistencia Consecutiva")
 
-    if df_premios.empty:
-        st.info("Ningún cliente ha alcanzado los 30 almuerzos aún.")
+    def dias_consecutivos(fecha_lista):
+        fechas = sorted([datetime.strptime(f, "%Y-%m-%d") for f in fecha_lista])
+        max_consec = actual = 1
+        for i in range(1, len(fechas)):
+            if (fechas[i] - fechas[i-1]).days == 1:
+                actual += 1
+                max_consec = max(max_consec, actual)
+            else:
+                actual = 1
+        return max_consec
+
+    premiados = []
+    for cliente in df_clientes["NOMBRE Y APELLIDO COMPLETO"]:
+        fechas = df_ventas[df_ventas["Cliente"] == cliente]["Fecha"].tolist()
+        if len(fechas) >= 15:
+            consecutivos = dias_consecutivos(fechas)
+            if consecutivos >= 15:
+                premiados.append((cliente, consecutivos))
+
+    premiados.sort(key=lambda x: x[1], reverse=True)
+
+    if premiados:
+        df_premios = pd.DataFrame(premiados, columns=["Cliente", "Días consecutivos"])
+        st.dataframe(df_premios)
     else:
-        df_premios["Premios obtenidos"] = df_premios["DIAS QUE VINO"] // 30
-        st.dataframe(df_premios[["NOMBRE Y APELLIDO COMPLETO", "DIAS QUE VINO", "Premios obtenidos"]])
+        st.info("Ningún cliente ha asistido 15 días consecutivos aún.")
 
