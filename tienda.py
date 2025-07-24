@@ -1,4 +1,4 @@
-# Surtitienda Comunitaria - App Mejorada (con racha de asistencia)
+# Surtitienda Comunitaria - App Completa con Racha y Corrección de Columnas
 
 import streamlit as st
 import pandas as pd
@@ -22,7 +22,14 @@ def cargar_datos():
     if not os.path.exists(archivo_ventas):
         pd.DataFrame(columns=["# de pedido", "Fecha", "Cliente", "Vendedor", "Producto", "Cantidad", "Total", "PagoCon", "Devuelta"]).to_excel(archivo_ventas, index=False)
 
-    return pd.read_excel(archivo_clientes), pd.read_excel(archivo_ventas)
+    df_clientes = pd.read_excel(archivo_clientes)
+    df_ventas = pd.read_excel(archivo_ventas)
+
+    # Limpiar nombres de columnas
+    df_clientes.columns = df_clientes.columns.str.strip()
+    df_ventas.columns = df_ventas.columns.str.strip()
+
+    return df_clientes, df_ventas
 
 df_clientes, df_ventas = cargar_datos()
 
@@ -84,31 +91,34 @@ if menu == "Registrar Cliente":
 # === ACTUALIZAR / ELIMINAR CLIENTE ===
 elif menu == "Actualizar / Eliminar Cliente":
     st.title("🛠️ Actualizar o Eliminar Cliente")
-    cliente_sel = st.selectbox("Selecciona un cliente", df_clientes["NOMBRE Y APELLIDO COMPLETO"].tolist())
-    idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_sel].index[0]
+    if not df_clientes.empty:
+        cliente_sel = st.selectbox("Selecciona un cliente", df_clientes["NOMBRE Y APELLIDO COMPLETO"].tolist())
+        idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_sel].index[0]
 
-    with st.form("form_update"):
-        nuevo_nombre = st.text_input("Nombre", df_clientes.loc[idx, "NOMBRE Y APELLIDO COMPLETO"])
-        nuevo_tipo = st.selectbox("Tipo", ["CC", "TI"], index=["CC", "TI"].index(df_clientes.loc[idx, "TIPO(1)"]))
-        nuevo_num = st.text_input("Número", df_clientes.loc[idx, "NUMERO"])
-        nuevo_tel = st.text_input("Teléfono", df_clientes.loc[idx, "TELEFONO CONTACTO"])
-        nuevo_barrio = st.text_input("Barrio", df_clientes.loc[idx, "BARRIO Y/O DIRRECCION"])
-        nueva_comuna = st.text_input("Comuna", df_clientes.loc[idx, "COMUNA"])
-        guardar = st.form_submit_button("Actualizar")
+        with st.form("form_update"):
+            nuevo_nombre = st.text_input("Nombre", df_clientes.loc[idx, "NOMBRE Y APELLIDO COMPLETO"])
+            nuevo_tipo = st.selectbox("Tipo", ["CC", "TI"], index=["CC", "TI"].index(df_clientes.loc[idx, "TIPO(1)"]))
+            nuevo_num = st.text_input("Número", df_clientes.loc[idx, "NUMERO"])
+            nuevo_tel = st.text_input("Teléfono", df_clientes.loc[idx, "TELEFONO CONTACTO"])
+            nuevo_barrio = st.text_input("Barrio", df_clientes.loc[idx, "BARRIO Y/O DIRRECCION"])
+            nueva_comuna = st.text_input("Comuna", df_clientes.loc[idx, "COMUNA"])
+            guardar = st.form_submit_button("Actualizar")
 
-    if guardar:
-        df_clientes.loc[idx] = [
-            df_clientes.loc[idx, "ID"], nuevo_nombre, nuevo_tipo,
-            nuevo_num, nuevo_tel, nuevo_barrio, nueva_comuna,
-            df_clientes.loc[idx, "DIAS QUE VINO"]
-        ]
-        guardar_clientes()
-        st.success("Cliente actualizado")
+        if guardar:
+            df_clientes.loc[idx] = [
+                df_clientes.loc[idx, "ID"], nuevo_nombre, nuevo_tipo,
+                nuevo_num, nuevo_tel, nuevo_barrio, nueva_comuna,
+                df_clientes.loc[idx, "DIAS QUE VINO"]
+            ]
+            guardar_clientes()
+            st.success("Cliente actualizado")
 
-    if st.button("❌ Eliminar cliente"):
-        df_clientes = df_clientes.drop(index=idx)
-        guardar_clientes()
-        st.success("Cliente eliminado")
+        if st.button("❌ Eliminar cliente"):
+            df_clientes = df_clientes.drop(index=idx)
+            guardar_clientes()
+            st.success("Cliente eliminado")
+    else:
+        st.info("No hay clientes disponibles para modificar.")
 
 # === REGISTRAR VENTA ===
 elif menu == "Registrar Venta":
@@ -153,16 +163,17 @@ elif menu == "Registrar Venta":
 
     st.markdown("---")
     st.subheader("🗑️ Eliminar Compra")
-    pedidos_disponibles = df_ventas["# de pedido"].tolist()
-    pedido_seleccionado = st.selectbox("Selecciona un pedido", pedidos_disponibles)
-    pedido_info = df_ventas[df_ventas["# de pedido"] == pedido_seleccionado]
-    st.write("Detalles del pedido:")
-    st.dataframe(pedido_info)
+    if not df_ventas.empty:
+        pedidos_disponibles = df_ventas["# de pedido"].tolist()
+        pedido_seleccionado = st.selectbox("Selecciona un pedido", pedidos_disponibles)
+        pedido_info = df_ventas[df_ventas["# de pedido"] == pedido_seleccionado]
+        st.write("Detalles del pedido:")
+        st.dataframe(pedido_info)
 
-    if st.button("Eliminar compra"):
-        df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_seleccionado]
-        guardar_ventas()
-        st.success("Compra eliminada correctamente.")
+        if st.button("Eliminar compra"):
+            df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_seleccionado]
+            guardar_ventas()
+            st.success("Compra eliminada correctamente.")
 
 # === RESUMEN DE VENTAS ===
 elif menu == "Resumen de Ventas":
@@ -189,7 +200,7 @@ elif menu == "Premios 🎁":
         return max_racha
 
     resultados = []
-    for cliente in df_clientes["NOMBRE Y APELLIDO COMPLETO"]:
+    for cliente in df_clientes["NOMBRE Y APELLIDO COMPLETO"].unique():
         fechas_cliente = df_ventas[df_ventas["Cliente"] == cliente]["Fecha"].tolist()
         racha = calcular_racha(fechas_cliente)
         resultados.append((cliente, racha))
@@ -197,4 +208,3 @@ elif menu == "Premios 🎁":
     resultados_ordenados = sorted(resultados, key=lambda x: x[1], reverse=True)
     df_rachas = pd.DataFrame(resultados_ordenados, columns=["Cliente", "Días consecutivos"])
     st.dataframe(df_rachas)
-
