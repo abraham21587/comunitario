@@ -1,8 +1,8 @@
-# Surtitienda Comunitaria - App Completa con Racha y Corrección de Columnas
+# Surtitienda Comunitaria - App con resumen gráfico y premios por compras
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 
 # Archivos
@@ -182,29 +182,23 @@ elif menu == "Resumen de Ventas":
     total_general = df_ventas["Total"].sum()
     st.success(f"🧾 Total acumulado: ${total_general:,.0f}")
 
+    st.subheader("📈 Gráfico de ventas por día")
+    if not df_ventas.empty:
+        ventas_por_dia = df_ventas.groupby("Fecha")["Total"].sum().reset_index()
+        st.line_chart(ventas_por_dia.rename(columns={"Fecha": "index"}).set_index("index"))
+        dia_mas = ventas_por_dia.loc[ventas_por_dia["Total"].idxmax()]
+        dia_menos = ventas_por_dia.loc[ventas_por_dia["Total"].idxmin()]
+        st.info(f"📈 Día con más ventas: {dia_mas['Fecha']} (${dia_mas['Total']:,.0f})")
+        st.info(f"📉 Día con menos ventas: {dia_menos['Fecha']} (${dia_menos['Total']:,.0f})")
+
 # === PREMIOS ===
 elif menu == "Premios 🎁":
-    st.title("🔥 Racha de asistencia diaria (TikTok style)")
+    st.title("🎁 Clientes que han alcanzado 30 almuerzos")
+    premios = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
+    premios_filtrados = premios[premios["Cantidad"] >= 30].sort_values(by="Cantidad", ascending=False)
 
-    def calcular_racha(fechas):
-        if not fechas:
-            return 0
-        fechas_ordenadas = sorted([datetime.strptime(str(f), "%Y-%m-%d") for f in fechas])
-        max_racha = racha_actual = 1
-        for i in range(1, len(fechas_ordenadas)):
-            if (fechas_ordenadas[i] - fechas_ordenadas[i-1]).days == 1:
-                racha_actual += 1
-                max_racha = max(max_racha, racha_actual)
-            else:
-                racha_actual = 1
-        return max_racha
+    if premios_filtrados.empty:
+        st.warning("Ningún cliente ha alcanzado los 30 almuerzos todavía.")
+    else:
+        st.dataframe(premios_filtrados.rename(columns={"Cantidad": "Almuerzos comprados"}))
 
-    resultados = []
-    for cliente in df_clientes["NOMBRE Y APELLIDO COMPLETO"].unique():
-        fechas_cliente = df_ventas[df_ventas["Cliente"] == cliente]["Fecha"].tolist()
-        racha = calcular_racha(fechas_cliente)
-        resultados.append((cliente, racha))
-
-    resultados_ordenados = sorted(resultados, key=lambda x: x[1], reverse=True)
-    df_rachas = pd.DataFrame(resultados_ordenados, columns=["Cliente", "Días consecutivos"])
-    st.dataframe(df_rachas)
