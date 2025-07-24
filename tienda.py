@@ -1,4 +1,3 @@
-# cajero_surtitienda.py
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -34,153 +33,177 @@ if not os.path.exists(archivo_clientes):
 else:
     df_clientes = pd.read_excel(archivo_clientes)
 
-# Configurar página
-st.set_page_config(page_title="🥘 Cajero Surtitienda Comunitaria", layout="centered")
-menu = st.sidebar.radio("📋 Menú", [
-    "Registrar Venta", "Registrar Cliente", 
-    "Actualizar/Eliminar Cliente", "Premios", "Resumen de Ventas"
-])
+# Configuración de la página
+st.set_page_config(page_title="Cajero Surtitienda Comunitaria", layout="centered")
 
-# ---------- REGISTRAR CLIENTE ----------
+# Menú lateral
+menu = st.sidebar.radio("Menú", ["Registrar Venta", "Registrar Cliente", "Eliminar Venta", "Premios"])
+
+# === REGISTRAR CLIENTE ===
 if menu == "Registrar Cliente":
-    st.title("📇 Registro de Clientes")
+    st.title("🧑‍💼 Registro de Clientes")
+
     with st.form("form_cliente"):
-        nombre = st.text_input("👤 Nombre y apellido completo") or "N/A"
-        tipo = st.selectbox("🔔 Tipo de documento", ["CC", "TI"])
-        numero = st.text_input("🔢 Número") or "N/A"
-        telefono = st.text_input("📞 Teléfono de contacto") or "N/A"
-        barrio = st.text_input("📍 Barrio y/o dirección") or "N/A"
-        comuna = st.text_input("🏡 Comuna") or "N/A"
-        enviar = st.form_submit_button("📂 Guardar cliente")
+        nombre = st.text_input("Nombre y apellido completo")
+        tipo = st.selectbox("Tipo de documento", ["CC", "TI"])
+        numero = st.text_input("Número")
+        telefono = st.text_input("Teléfono de contacto")
+        barrio = st.text_input("Barrio y/o dirección")
+        comuna = st.text_input("Comuna")
+        enviar = st.form_submit_button("Guardar cliente")
 
     if enviar:
-        duplicado = (
-            nombre.strip().lower() in df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.lower().values
-            or numero.strip() in df_clientes["NUMERO"].astype(str).values
-            or telefono.strip() in df_clientes["TELEFONO CONTACTO"].astype(str).values
-        )
-        if duplicado:
-            st.error("⚠️ Cliente ya registrado.")
+        if nombre and telefono:
+            nombre_duplicado = nombre.strip().lower() in df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.strip().str.lower().values
+            numero_duplicado = numero.strip() in df_clientes["NUMERO"].astype(str).str.strip().values
+            telefono_duplicado = telefono.strip() in df_clientes["TELEFONO CONTACTO"].astype(str).str.strip().values
+
+            if nombre_duplicado:
+                st.error("❌ Ya existe un cliente con ese nombre.")
+            elif numero_duplicado:
+                st.error("❌ Ya existe un cliente con ese número de documento.")
+            elif telefono_duplicado:
+                st.error("❌ Ya existe un cliente con ese teléfono.")
+            else:
+                nuevo_id = 1 if df_clientes.empty else df_clientes["ID"].max() + 1
+                nuevo_cliente = pd.DataFrame([{
+                    "ID": nuevo_id,
+                    "NOMBRE Y APELLIDO COMPLETO": nombre,
+                    "TIPO(1)": tipo,
+                    "NUMERO": numero,
+                    "TELEFONO CONTACTO": telefono,
+                    "BARRIO Y/O DIRRECCION": barrio,
+                    "COMUNA": comuna,
+                    "DIAS QUE VINO": 0
+                }])
+                df_clientes = pd.concat([df_clientes, nuevo_cliente], ignore_index=True)
+                df_clientes.to_excel(archivo_clientes, index=False)
+                st.success("✅ Cliente registrado correctamente.")
         else:
-            nuevo_id = 1 if df_clientes.empty else df_clientes["ID"].max() + 1
-            nuevo_cliente = pd.DataFrame([{
-                "ID": nuevo_id,
-                "NOMBRE Y APELLIDO COMPLETO": nombre,
-                "TIPO(1)": tipo,
-                "NUMERO": numero,
-                "TELEFONO CONTACTO": telefono,
-                "BARRIO Y/O DIRRECCION": barrio,
-                "COMUNA": comuna,
-                "DIAS QUE VINO": 0
-            }])
-            df_clientes = pd.concat([df_clientes, nuevo_cliente], ignore_index=True)
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente registrado correctamente.")
+            st.error("Por favor completa los campos obligatorios.")
 
-# ---------- REGISTRAR VENTA ----------
+    st.markdown("---")
+    if st.button("📋 Mostrar clientes registrados"):
+        if df_clientes.empty:
+            st.info("No hay clientes registrados aún.")
+        else:
+            st.subheader("📄 Lista de clientes")
+            st.dataframe(df_clientes)
+
+# === REGISTRAR VENTA ===
 elif menu == "Registrar Venta":
-    st.title("📄 Registrar Venta")
+    st.title("🧾 Cajero Surtitienda Comunitaria")
+    st.markdown("Registra tus ventas diarias de almuerzos 🍽️")
+
+    st.subheader("👤 Buscar cliente")
     opciones_clientes = df_clientes["NOMBRE Y APELLIDO COMPLETO"].dropna().tolist()
-    cliente = st.selectbox("👤 Selecciona cliente", opciones_clientes) if opciones_clientes else None
+    cliente_seleccionado = st.selectbox("Selecciona el cliente", opciones_clientes) if opciones_clientes else None
 
-    if cliente:
-        vendedor = st.selectbox("👨‍💼 Vendedor", ["Jairo", "Estefanía"])
-        cantidad = st.number_input("🍱 Cantidad de almuerzos", min_value=1, step=1)
-        precio = 2500
-        total = cantidad * precio
-        pago = st.number_input("💵 Pago con", min_value=0, step=500)
-        devuelta = max(0, pago - total)
+    if cliente_seleccionado:
+        st.markdown(f"🧍 **Cliente seleccionado:** `{cliente_seleccionado}`")
 
-        st.info(f"💰 Total a pagar: **${total:,.0f}**")
-        st.info(f"🔁 Devuelta: **${devuelta:,.0f}**")
+    vendedor = st.selectbox("Selecciona el vendedor", ["Jairo", "Estefanía", "Otra persona"])
+    producto = "Almuerzo"
+    st.text_input("Producto", producto, disabled=True)
 
-        if st.button("📂 Registrar venta"):
+    cantidad = st.number_input("Cantidad de almuerzos", min_value=1, step=1)
+    precio_unitario = 2500
+    total = cantidad * precio_unitario
+    st.write(f"💰 Total a pagar: **${total:,.0f}**")
+
+    pago_con = st.number_input("Pago con:", min_value=0, step=1000)
+    devuelta = pago_con - total if pago_con >= total else 0
+    st.write(f"💵 Devuelta: **${devuelta:,.0f}**")
+
+    if st.button("Registrar venta"):
+        if pago_con < total:
+            st.error("El valor pagado es insuficiente.")
+        elif not cliente_seleccionado:
+            st.error("Por favor selecciona un cliente.")
+        else:
             nuevo_pedido = 1 if df_ventas.empty else df_ventas["# de pedido"].max() + 1
             nueva_venta = pd.DataFrame([{
                 "# de pedido": nuevo_pedido,
                 "Fecha": datetime.now().strftime("%Y-%m-%d"),
-                "Cliente": cliente,
+                "Cliente": cliente_seleccionado,
                 "Vendedor": vendedor,
-                "Producto": "Almuerzo",
+                "Producto": producto,
                 "Cantidad": cantidad,
                 "Total": total,
-                "PagoCon": pago,
+                "PagoCon": pago_con,
                 "Devuelta": devuelta
             }])
             df_ventas = pd.concat([df_ventas, nueva_venta], ignore_index=True)
             df_ventas.to_excel(archivo_ventas, index=False)
 
-            idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente].index
+            idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_seleccionado].index
             if not idx.empty:
-                df_clientes.loc[idx, "DIAS QUE VINO"] += 1
+                dias_actuales = df_clientes.loc[idx, "DIAS QUE VINO"].fillna(0).astype(int)
+                df_clientes.loc[idx, "DIAS QUE VINO"] = dias_actuales + 1
                 df_clientes.to_excel(archivo_clientes, index=False)
 
-            st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
+            st.success(f"✅ Venta registrada con pedido #{nuevo_pedido} para {cliente_seleccionado}.")
 
-    # ---------- ELIMINAR VENTA ----------
-    st.markdown("---")
-    st.subheader("🗑️ Eliminar una venta")
+    st.subheader("📊 Resumen del Día (solo hoy)")
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+    df_hoy = df_ventas[df_ventas["Fecha"] == fecha_hoy]
 
+    if not df_hoy.empty:
+        total_dia = df_hoy["Total"].sum()
+        st.metric("Total vendido hoy", f"${total_dia:,.0f}")
+        st.bar_chart(df_hoy.groupby("Vendedor")["Total"].sum())
+
+        if st.button("🛑 Cerrar caja"):
+            st.subheader("📦 Caja cerrada")
+            st.dataframe(df_hoy)
+            st.success(f"💰 Total vendido hoy: **${total_dia:,.0f}**")
+    else:
+        st.info("No hay ventas registradas hoy.")
+
+    if st.button("📂 Ver resumen final"):
+        st.subheader("📜 Resumen completo de ventas")
+        st.dataframe(df_ventas)
+        total_general = df_ventas["Total"].sum()
+        st.success(f"🧾 Total acumulado: **${total_general:,.0f}**")
+
+# === ELIMINAR VENTA ===
+elif menu == "Eliminar Venta":
+    st.title("🗑️ Eliminar Venta")
     if not df_ventas.empty:
-        df_ventas["Descripcion"] = df_ventas.apply(lambda row: f"#{row['# de pedido']} - {row.get('Cliente', 'Sin nombre')} ({row['Fecha']}) x{row['Cantidad']}", axis=1)
-        opcion = st.selectbox("📦 Selecciona una venta para eliminar", df_ventas["Descripcion"])
+        df_ventas["Descripción"] = df_ventas.apply(lambda x: f"#{x['# de pedido']} - {x['Cliente']} ({x['Fecha']}) x{x['Cantidad']}", axis=1)
+        seleccion = st.selectbox("Selecciona una venta", df_ventas["Descripción"])
 
-        if opcion:
-            pedido_id = int(opcion.split("-")[0].replace("#", "").strip())
-            venta_detalle = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
+        if seleccion:
+            pedido_id = int(seleccion.split("-")[0].replace("#", "").strip())
+            venta = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
+            st.markdown(f"**Cliente:** {venta['Cliente']}")
+            st.markdown(f"**Vendedor:** {venta['Vendedor']}")
+            st.markdown(f"**Cantidad:** {venta['Cantidad']}")
+            st.markdown(f"**Total:** ${venta['Total']:,.0f}")
 
-            st.markdown("### 🧾 Detalles de la venta seleccionada")
-            st.markdown(f"**Cliente:** {venta_detalle.get('Cliente', 'Sin nombre')}")
-            st.markdown(f"**Fecha:** {venta_detalle['Fecha']}")
-            st.markdown(f"**Vendedor:** {venta_detalle['Vendedor']}")
-            st.markdown(f"**Producto:** {venta_detalle['Producto']}")
-            st.markdown(f"**Cantidad:** {venta_detalle['Cantidad']}")
-            st.markdown(f"**Total:** ${venta_detalle['Total']:,.0f}")
-            st.markdown(f"**Pagó con:** ${venta_detalle['PagoCon']:,.0f}")
-            st.markdown(f"**Devuelta:** ${venta_detalle['Devuelta']:,.0f}")
-
-            if st.button("❌ Eliminar venta seleccionada"):
-                nombre_cliente = venta_detalle.get("Cliente", "").strip()
-                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id].drop(columns=["Descripcion"])
+            if st.button("Eliminar esta venta"):
+                nombre_cliente = venta.get("Cliente", "")
+                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id].drop(columns=["Descripción"])
                 df_ventas.to_excel(archivo_ventas, index=False)
 
-                if nombre_cliente:
-                    idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.strip() == nombre_cliente].index
-                    if not idx.empty:
-                        df_clientes.loc[idx, "DIAS QUE VINO"] -= 1
-                        df_clientes["DIAS QUE VINO"] = df_clientes["DIAS QUE VINO"].clip(lower=0)
-                        df_clientes.to_excel(archivo_clientes, index=False)
+                idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == nombre_cliente].index
+                if not idx.empty:
+                    df_clientes.loc[idx, "DIAS QUE VINO"] -= 1
+                    df_clientes["DIAS QUE VINO"] = df_clientes["DIAS QUE VINO"].clip(lower=0)
+                    df_clientes.to_excel(archivo_clientes, index=False)
 
-                st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+                st.success("✅ Venta eliminada correctamente.")
+    else:
+        st.info("No hay ventas para eliminar.")
 
-# ---------- PREMIOS ----------
+# === PREMIOS ===
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
-
     if "Cliente" in df_ventas.columns and "Cantidad" in df_ventas.columns:
         resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
         resumen["Almuerzos Comprados"] = resumen["Cantidad"]
-        resumen["Premios Ganados 🏆"] = resumen["Almuerzos Comprados"] // 30
-        resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados 🏆"]]
+        resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
+        resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]]
         st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
     else:
         st.warning("⚠️ No hay datos suficientes para calcular premios.")
-
-# ---------- RESUMEN DE VENTAS ----------
-elif menu == "Resumen de Ventas":
-    st.title("📊 Resumen de Ventas")
-    st.dataframe(df_ventas)
-
-    if "Fecha" in df_ventas.columns:
-        df_ventas["Fecha"] = pd.to_datetime(df_ventas["Fecha"], errors='coerce')
-        ventas_por_dia = df_ventas.groupby(df_ventas["Fecha"].dt.date)["Total"].sum()
-
-        st.subheader("📈 Ventas por día")
-        st.line_chart(ventas_por_dia)
-
-        if not ventas_por_dia.empty:
-            dia_max = ventas_por_dia.idxmax()
-            dia_min = ventas_por_dia.idxmin()
-            st.success(f"🗓️ Día con más ventas: **{dia_max}** - 💰 ${ventas_por_dia.max():,.0f}")
-            st.info(f"🗓️ Día con menos ventas: **{dia_min}** - 💸 ${ventas_por_dia.min():,.0f}")
-
