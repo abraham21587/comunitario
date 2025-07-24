@@ -1,4 +1,4 @@
-# Surtitienda Comunitaria - App Mejorada
+# Surtitienda Comunitaria - App Mejorada (con correcciones)
 
 import streamlit as st
 import pandas as pd
@@ -81,6 +81,35 @@ if menu == "Registrar Cliente":
     if st.button("📋 Mostrar clientes registrados"):
         st.dataframe(df_clientes)
 
+# === ACTUALIZAR / ELIMINAR CLIENTE ===
+elif menu == "Actualizar / Eliminar Cliente":
+    st.title("🛠️ Actualizar o Eliminar Cliente")
+    cliente_sel = st.selectbox("Selecciona un cliente", df_clientes["NOMBRE Y APELLIDO COMPLETO"].tolist())
+    idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_sel].index[0]
+
+    with st.form("form_update"):
+        nuevo_nombre = st.text_input("Nombre", df_clientes.loc[idx, "NOMBRE Y APELLIDO COMPLETO"])
+        nuevo_tipo = st.selectbox("Tipo", ["CC", "TI"], index=["CC", "TI"].index(df_clientes.loc[idx, "TIPO(1)"]))
+        nuevo_num = st.text_input("Número", df_clientes.loc[idx, "NUMERO"])
+        nuevo_tel = st.text_input("Teléfono", df_clientes.loc[idx, "TELEFONO CONTACTO"])
+        nuevo_barrio = st.text_input("Barrio", df_clientes.loc[idx, "BARRIO Y/O DIRRECCION"])
+        nueva_comuna = st.text_input("Comuna", df_clientes.loc[idx, "COMUNA"])
+        guardar = st.form_submit_button("Actualizar")
+
+    if guardar:
+        df_clientes.loc[idx] = [
+            df_clientes.loc[idx, "ID"], nuevo_nombre, nuevo_tipo,
+            nuevo_num, nuevo_tel, nuevo_barrio, nueva_comuna,
+            df_clientes.loc[idx, "DIAS QUE VINO"]
+        ]
+        guardar_clientes()
+        st.success("Cliente actualizado")
+
+    if st.button("❌ Eliminar cliente"):
+        df_clientes = df_clientes.drop(index=idx)
+        guardar_clientes()
+        st.success("Cliente eliminado")
+
 # === REGISTRAR VENTA ===
 elif menu == "Registrar Venta":
     st.title("🧾 Registrar Venta")
@@ -146,8 +175,8 @@ elif menu == "Resumen de Ventas":
 elif menu == "Premios 🎁":
     st.title("🎁 Clientes Premiados por Asistencia Consecutiva")
 
-    def dias_consecutivos(fecha_lista):
-        fechas = sorted([datetime.strptime(f, "%Y-%m-%d") for f in fecha_lista])
+    def dias_consecutivos(lista_fechas):
+        fechas = sorted([datetime.strptime(str(f), "%Y-%m-%d") for f in lista_fechas])
         max_consec = actual = 1
         for i in range(1, len(fechas)):
             if (fechas[i] - fechas[i-1]).days == 1:
@@ -159,17 +188,16 @@ elif menu == "Premios 🎁":
 
     premiados = []
     for cliente in df_clientes["NOMBRE Y APELLIDO COMPLETO"]:
-        fechas = df_ventas[df_ventas["Cliente"] == cliente]["Fecha"].tolist()
-        if len(fechas) >= 15:
-            consecutivos = dias_consecutivos(fechas)
+        fechas_cliente = df_ventas[df_ventas["Cliente"] == cliente]["Fecha"].tolist()
+        if len(fechas_cliente) >= 15:
+            consecutivos = dias_consecutivos(fechas_cliente)
             if consecutivos >= 15:
                 premiados.append((cliente, consecutivos))
 
     premiados.sort(key=lambda x: x[1], reverse=True)
 
     if premiados:
-        df_premios = pd.DataFrame(premiados, columns=["Cliente", "Días consecutivos"])
-        st.dataframe(df_premios)
+        st.dataframe(pd.DataFrame(premiados, columns=["Cliente", "Días consecutivos"]))
     else:
         st.info("Ningún cliente ha asistido 15 días consecutivos aún.")
 
