@@ -114,32 +114,28 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
 
-    # ---------- ELIMINAR VENTA ----------
+  # Eliminar venta
     st.markdown("---")
-    st.subheader("🚟️ Eliminar una venta")
+    st.subheader("Eliminar una venta")
     if not df_ventas.empty:
-        df_ventas["DETALLE"] = df_ventas.apply(
-            lambda row: f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}", axis=1
-        )
-        venta_seleccionada = st.selectbox("📦 Selecciona una venta para eliminar", df_ventas["DETALLE"].tolist())
-        pedido_id = int(venta_seleccionada.split(" ")[0][1:])
-
-        if st.button("❌ Eliminar venta"):
+        pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", df_ventas["# de pedido"].tolist())
+        if st.button("Eliminar venta"):
             df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
             df_ventas.to_excel(archivo_ventas, index=False)
-            st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+            st.success(f"Venta con pedido #{pedido_id} eliminada correctamente.")
 
-# ---------- PREMIOS ----------
+# Premios
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
-    if not df_ventas.empty:
+    if "Cliente" in df_ventas.columns:
         resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
-        resumen["Almuerzos Comprados"] = resumen["Cantidad"]
-        resumen["Premios Ganados 🏆"] = resumen["Almuerzos Comprados"] // 30
-        resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados 🏆"]]
-        st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
     else:
-        st.warning("⚠️ No hay ventas registradas aún.")
+        resumen = df_ventas.groupby("cliente")["Cantidad"].sum().reset_index()
+        resumen.rename(columns={"cliente": "Cliente"}, inplace=True)
+    resumen["Almuerzos Comprados"] = resumen["Cantidad"]
+    resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
+    resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]]
+    st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
 
 # ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
 elif menu == "Actualizar/Eliminar Cliente":
