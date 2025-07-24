@@ -7,38 +7,44 @@ import os
 archivo_ventas = "ventas.xlsx"
 archivo_clientes = "clientes.xlsx"
 
-# Columnas esperadas en clientes
+# Columnas esperadas
+columnas_ventas = [
+    "# de pedido", "Fecha", "Cliente", "Vendedor", "Producto",
+    "Cantidad", "Total", "PagoCon", "Devuelta"
+]
 columnas_clientes = [
     "ID", "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO",
     "TELEFONO CONTACTO", "BARRIO Y/O DIRRECCION", "COMUNA", "DIAS QUE VINO"
 ]
 
-# === Cargar o crear archivo de ventas ===
+# Validar y cargar archivo de ventas
 if os.path.exists(archivo_ventas):
-    df_ventas = pd.read_excel(archivo_ventas)
-
-    # Verificar que tenga la columna 'Cliente'
-    if "Cliente" not in df_ventas.columns:
-        df_ventas["Cliente"] = ""
+    try:
+        df_ventas = pd.read_excel(archivo_ventas)
+        if df_ventas.empty or any(col not in df_ventas.columns for col in columnas_ventas):
+            df_ventas = pd.DataFrame(columns=columnas_ventas)
+            df_ventas.to_excel(archivo_ventas, index=False)
+    except:
+        df_ventas = pd.DataFrame(columns=columnas_ventas)
         df_ventas.to_excel(archivo_ventas, index=False)
 else:
-    df_ventas = pd.DataFrame(columns=[
-        "# de pedido", "Fecha", "Cliente", "Vendedor", "Producto",
-        "Cantidad", "Total", "PagoCon", "Devuelta"
-    ])
+    df_ventas = pd.DataFrame(columns=columnas_ventas)
     df_ventas.to_excel(archivo_ventas, index=False)
 
-# === Cargar o crear archivo de clientes ===
+# Validar y cargar archivo de clientes
 if os.path.exists(archivo_clientes):
-    df_clientes = pd.read_excel(archivo_clientes)
+    try:
+        df_clientes = pd.read_excel(archivo_clientes)
+    except:
+        df_clientes = pd.DataFrame(columns=columnas_clientes)
+        df_clientes.to_excel(archivo_clientes, index=False)
 else:
     df_clientes = pd.DataFrame(columns=columnas_clientes)
     df_clientes.to_excel(archivo_clientes, index=False)
 
-# Configurar página
+# Configurar Streamlit
 st.set_page_config(page_title="Cajero Surtitienda Comunitaria", layout="centered")
 
-# Menú
 menu = st.sidebar.radio("Menú", ["Registrar Venta", "Registrar Cliente", "Eliminar Venta", "Premios", "Resumen de Ventas"])
 
 # === REGISTRAR CLIENTE ===
@@ -134,7 +140,6 @@ elif menu == "Eliminar Venta":
             venta = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
             cliente = venta["Cliente"]
             st.markdown(f"**Cliente:** {cliente}")
-            st.markdown(f"**Vendedor:** {venta['Vendedor']}")
             st.markdown(f"**Cantidad:** {venta['Cantidad']}")
             st.markdown(f"**Total:** ${venta['Total']:,.0f}")
             st.markdown(f"**Fecha:** {venta['Fecha']}")
@@ -155,19 +160,21 @@ elif menu == "Eliminar Venta":
 # === PREMIOS ===
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
-    premios = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
-    premios.columns = ["NOMBRE Y APELLIDO COMPLETO", "Total Almuerzos"]
-    premios["Premios Ganados"] = premios["Total Almuerzos"] // 30
-    st.dataframe(premios.sort_values(by="Total Almuerzos", ascending=False))
+    if "Cliente" in df_ventas.columns:
+        resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
+        resumen["Almuerzos Comprados"] = resumen["Cantidad"]
+        resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
+        st.dataframe(resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]].sort_values(by="Almuerzos Comprados", ascending=False))
+    else:
+        st.error("❌ El archivo de ventas no contiene la columna 'Cliente'. No se puede calcular premios.")
 
 # === RESUMEN DE VENTAS ===
 elif menu == "Resumen de Ventas":
     st.title("📜 Resumen de Ventas")
     if not df_ventas.empty:
-        st.dataframe(df_ventas[["# de pedido", "Fecha", "Cliente", "Vendedor", "Producto", "Cantidad", "Total", "PagoCon", "Devuelta"]])
+        st.dataframe(df_ventas)
         total_general = df_ventas["Total"].sum()
         st.success(f"🧾 Total acumulado: **${total_general:,.0f}**")
     else:
         st.info("No hay ventas registradas.")
-
 
