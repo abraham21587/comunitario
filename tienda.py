@@ -43,10 +43,10 @@ menu = st.sidebar.radio("📋 Menú", [
 
 # ---------- REGISTRAR CLIENTE ----------
 if menu == "Registrar Cliente":
-    st.title("📟 Registro de Clientes")
+    st.title("📇 Registro de Clientes")
     with st.form("form_cliente"):
         nombre = st.text_input("👤 Nombre y apellido completo") or "N/A"
-        tipo = st.selectbox("🖔 Tipo de documento", ["CC", "TI"])
+        tipo = st.selectbox("🔔 Tipo de documento", ["CC", "TI"])
         numero = st.text_input("🔢 Número") or "N/A"
         telefono = st.text_input("📞 Teléfono de contacto") or "N/A"
         barrio = st.text_input("📍 Barrio y/o dirección") or "N/A"
@@ -79,7 +79,7 @@ if menu == "Registrar Cliente":
 
 # ---------- REGISTRAR VENTA ----------
 elif menu == "Registrar Venta":
-    st.title("📟 Registrar Venta")
+    st.title("📄 Registrar Venta")
     opciones_clientes = df_clientes["NOMBRE Y APELLIDO COMPLETO"].dropna().tolist()
     cliente = st.selectbox("👤 Selecciona cliente", opciones_clientes) if opciones_clientes else None
 
@@ -122,17 +122,14 @@ elif menu == "Registrar Venta":
     st.subheader("🗑️ Eliminar una venta")
 
     if not df_ventas.empty:
-        opciones_ventas = [
-            f"#{row['# de pedido']} - {row.get('Cliente', 'Sin nombre')} ({row['Fecha']}) x{row['Cantidad']}"
-            for _, row in df_ventas.iterrows()
-        ]
-        opcion = st.selectbox("📦 Selecciona una venta para eliminar", opciones_ventas)
+        df_ventas["Descripcion"] = df_ventas.apply(lambda row: f"#{row['# de pedido']} - {row.get('Cliente', 'Sin nombre')} ({row['Fecha']}) x{row['Cantidad']}", axis=1)
+        opcion = st.selectbox("📦 Selecciona una venta para eliminar", df_ventas["Descripcion"])
 
         if opcion:
             pedido_id = int(opcion.split("-")[0].replace("#", "").strip())
             venta_detalle = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
 
-            st.markdown("### 📟 Detalles de la venta seleccionada")
+            st.markdown("### 🧾 Detalles de la venta seleccionada")
             st.markdown(f"**Cliente:** {venta_detalle.get('Cliente', 'Sin nombre')}")
             st.markdown(f"**Fecha:** {venta_detalle['Fecha']}")
             st.markdown(f"**Vendedor:** {venta_detalle['Vendedor']}")
@@ -144,46 +141,17 @@ elif menu == "Registrar Venta":
 
             if st.button("❌ Eliminar venta seleccionada"):
                 nombre_cliente = venta_detalle.get("Cliente", "").strip()
-                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
+                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id].drop(columns=["Descripcion"])
                 df_ventas.to_excel(archivo_ventas, index=False)
 
                 if nombre_cliente:
                     idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.strip() == nombre_cliente].index
                     if not idx.empty:
-                        df_clientes.loc[idx, "DIAS QUE VINO"] = df_clientes.loc[idx, "DIAS QUE VINO"] - 1
+                        df_clientes.loc[idx, "DIAS QUE VINO"] -= 1
                         df_clientes["DIAS QUE VINO"] = df_clientes["DIAS QUE VINO"].clip(lower=0)
                         df_clientes.to_excel(archivo_clientes, index=False)
 
                 st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
-
-# ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
-elif menu == "Actualizar/Eliminar Cliente":
-    st.title("🔄 Actualizar o Eliminar Cliente")
-    if not df_clientes.empty:
-        seleccion = st.selectbox("👤 Selecciona un cliente", df_clientes["NOMBRE Y APELLIDO COMPLETO"])
-        datos = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion].iloc[0]
-
-        with st.form("form_update"):
-            nombre = st.text_input("Nombre", value=datos["NOMBRE Y APELLIDO COMPLETO"])
-            tipo = st.selectbox("Tipo de documento", ["CC", "TI"], index=0 if datos["TIPO(1)"] == "CC" else 1)
-            numero = st.text_input("Número", value=datos["NUMERO"])
-            telefono = st.text_input("Teléfono", value=datos["TELEFONO CONTACTO"])
-            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRRECCION"])
-            comuna = st.text_input("Comuna", value=datos["COMUNA"])
-            enviar = st.form_submit_button("📂 Actualizar cliente")
-
-        if enviar:
-            df_clientes.loc[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion, [
-                "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO", "TELEFONO CONTACTO",
-                "BARRIO Y/O DIRRECCION", "COMUNA"
-            ]] = [nombre, tipo, numero, telefono, barrio, comuna]
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente actualizado correctamente.")
-
-        if st.button("🔚 Eliminar cliente"):
-            df_clientes = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] != seleccion]
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente eliminado correctamente.")
 
 # ---------- PREMIOS ----------
 elif menu == "Premios":
