@@ -154,7 +154,7 @@ elif menu == "Eliminar Venta":
             pedido_id = int(seleccion.split("-")[0].replace("#", "").strip())
             venta = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
 
-            
+            st.markdown(f"**Cliente:** {venta['Cliente']}")
             st.markdown(f"**Vendedor:** {venta['Vendedor']}")
             st.markdown(f"**Cantidad:** {venta['Cantidad']}")
             st.markdown(f"**Total:** ${venta['Total']:,.0f}")
@@ -178,15 +178,9 @@ elif menu == "Eliminar Venta":
 # === PREMIOS ===
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
-    if "Cliente" in df_ventas.columns:
-        resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
-    else:
-        resumen = df_ventas.groupby("cliente")["Cantidad"].sum().reset_index()
-        resumen.rename(columns={"cliente": "Cliente"}, inplace=True)
-    resumen["Almuerzos Comprados"] = resumen["Cantidad"]
-    resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
-    resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]]
-    st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
+    df_clientes["Total Almuerzos"] = df_ventas.groupby("Cliente")["Cantidad"].sum().reindex(df_clientes["NOMBRE Y APELLIDO COMPLETO"]).fillna(0).astype(int).values
+    df_clientes["Premios Ganados"] = df_clientes["Total Almuerzos"] // 30
+    st.dataframe(df_clientes[["NOMBRE Y APELLIDO COMPLETO", "Total Almuerzos", "Premios Ganados"]].sort_values(by="Total Almuerzos", ascending=False))
 
 # === RESUMEN DE VENTAS ===
 elif menu == "Resumen de Ventas":
