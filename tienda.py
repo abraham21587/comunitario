@@ -1,5 +1,3 @@
-# Surtitienda Comunitaria - App con resumen gráfico y premios por compras
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -25,10 +23,8 @@ def cargar_datos():
     df_clientes = pd.read_excel(archivo_clientes)
     df_ventas = pd.read_excel(archivo_ventas)
 
-    # Limpiar nombres de columnas
     df_clientes.columns = df_clientes.columns.str.strip()
     df_ventas.columns = df_ventas.columns.str.strip()
-
     return df_clientes, df_ventas
 
 df_clientes, df_ventas = cargar_datos()
@@ -40,7 +36,7 @@ def guardar_clientes():
 def guardar_ventas():
     df_ventas.to_excel(archivo_ventas, index=False)
 
-# Configurar página
+# Página
 st.set_page_config(page_title="Surtitienda Comunitaria", layout="centered")
 menu = st.sidebar.radio("Menú", [
     "Registrar Venta", "Registrar Cliente", "Actualizar / Eliminar Cliente",
@@ -193,12 +189,21 @@ elif menu == "Resumen de Ventas":
 
 # === PREMIOS ===
 elif menu == "Premios 🎁":
-    st.title("🎁 Clientes que han alcanzado 30 almuerzos")
-    premios = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
-    premios_filtrados = premios[premios["Cantidad"] >= 30].sort_values(by="Cantidad", ascending=False)
+    st.title("🎁 Historial de Premios por Cliente")
+    st.markdown("Se otorga un premio por cada 30 almuerzos comprados.")
 
-    if premios_filtrados.empty:
-        st.warning("Ningún cliente ha alcanzado los 30 almuerzos todavía.")
+    if not df_ventas.empty:
+        resumen_premios = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
+        resumen_premios["Veces que ha ganado"] = (resumen_premios["Cantidad"] // 30).astype(int)
+        resumen_premios["Descripción"] = resumen_premios["Cantidad"].apply(
+            lambda x: f"Ha comprado {x} almuerzo{'s' if x != 1 else ''}."
+        )
+        tabla_final = resumen_premios[["Cliente", "Descripción", "Veces que ha ganado"]]
+        tabla_final = tabla_final.rename(columns={
+            "Cliente": "Nombre del cliente",
+            "Descripción": "Historial de compras",
+            "Veces que ha ganado": "Premios ganados"
+        })
+        st.dataframe(tabla_final)
     else:
-        st.dataframe(premios_filtrados.rename(columns={"Cantidad": "Almuerzos comprados"}))
-
+        st.warning("No hay ventas registradas aún.")
