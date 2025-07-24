@@ -45,7 +45,7 @@ else:
 # Configurar Streamlit
 st.set_page_config(page_title="Cajero Surtitienda Comunitaria", layout="centered")
 
-menu = st.sidebar.radio("Menú", ["Registrar Venta", "Registrar Cliente", "Asistencias", "Resumen de Ventas"])
+menu = st.sidebar.radio("Menú", ["Registrar Venta", "Registrar Cliente", "Eliminar Venta", "Premios", "Resumen de Ventas"])
 
 # === REGISTRAR CLIENTE ===
 if menu == "Registrar Cliente":
@@ -88,7 +88,7 @@ if menu == "Registrar Cliente":
 
 # === REGISTRAR VENTA ===
 elif menu == "Registrar Venta":
-    st.title("🗒️ Registrar Venta")
+    st.title("🧾 Registrar Venta")
 
     opciones_clientes = df_clientes["NOMBRE Y APELLIDO COMPLETO"].dropna().tolist()
     cliente = st.selectbox("Selecciona cliente", opciones_clientes) if opciones_clientes else None
@@ -127,15 +127,46 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada para {cliente}.")
 
-# === ASISTENCIAS ===
-elif menu == "Asistencias":
-    st.title("📅 Asistencias al restaurante")
-    if not df_clientes.empty:
-        resumen = df_clientes[["NOMBRE Y APELLIDO COMPLETO", "DIAS QUE VINO"]].copy()
-        resumen = resumen.sort_values(by="DIAS QUE VINO", ascending=False)
-        st.dataframe(resumen)
+# === ELIMINAR VENTA ===
+elif menu == "Eliminar Venta":
+    st.title("🗑️ Eliminar Venta")
+    if not df_ventas.empty:
+        df_ventas["Descripción"] = df_ventas.apply(
+            lambda row: f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}", axis=1)
+        seleccion = st.selectbox("Selecciona una venta", df_ventas["Descripción"].tolist())
+
+        if seleccion:
+            pedido_id = int(seleccion.split("-")[0].replace("#", "").strip())
+            venta = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
+            cliente = venta["Cliente"]
+            st.markdown(f"**Cliente:** {cliente}")
+            st.markdown(f"**Cantidad:** {venta['Cantidad']}")
+            st.markdown(f"**Total:** ${venta['Total']:,.0f}")
+            st.markdown(f"**Fecha:** {venta['Fecha']}")
+
+            if st.button("❌ Confirmar eliminación"):
+                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id].drop(columns=["Descripción"])
+                df_ventas.to_excel(archivo_ventas, index=False)
+
+                idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente].index
+                if not idx.empty:
+                    df_clientes.loc[idx, "DIAS QUE VINO"] = max(0, df_clientes.loc[idx, "DIAS QUE VINO"].values[0] - 1)
+                    df_clientes.to_excel(archivo_clientes, index=False)
+
+                st.success("✅ Venta eliminada correctamente.")
     else:
-        st.info("No hay clientes registrados.")
+        st.info("No hay ventas registradas aún.")
+
+# === PREMIOS ===
+elif menu == "Premios":
+    st.title("🎁 Premios por Almuerzos Comprados")
+    if "Cliente" in df_ventas.columns:
+        resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
+        resumen["Almuerzos Comprados"] = resumen["Cantidad"]
+        resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
+        st.dataframe(resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]].sort_values(by="Almuerzos Comprados", ascending=False))
+    else:
+        st.error("❌ El archivo de ventas no contiene la columna 'Cliente'. No se puede calcular premios.")
 
 # === RESUMEN DE VENTAS ===
 elif menu == "Resumen de Ventas":
