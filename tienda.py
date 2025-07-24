@@ -99,7 +99,7 @@ elif menu == "Registrar Venta":
             nueva_venta = pd.DataFrame([{
                 "# de pedido": nuevo_pedido,
                 "Fecha": datetime.now().strftime("%Y-%m-%d"),
-                "Cliente": cliente,
+                "Cliente": cliente,  # 👈 asegurar columna Cliente
                 "Vendedor": vendedor,
                 "Producto": "Almuerzo",
                 "Cantidad": cantidad,
@@ -107,6 +107,11 @@ elif menu == "Registrar Venta":
                 "PagoCon": pago,
                 "Devuelta": devuelta
             }])
+
+            # 👇 si por algún motivo no existe la columna Cliente, la creamos
+            if "Cliente" not in df_ventas.columns:
+                df_ventas["Cliente"] = ""
+
             df_ventas = pd.concat([df_ventas, nueva_venta], ignore_index=True)
             df_ventas.to_excel(archivo_ventas, index=False)
 
@@ -117,50 +122,27 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
 
-    # Eliminar venta
+    # ---------- ELIMINAR VENTA ----------
     st.markdown("---")
     st.subheader("🗑️ Eliminar una venta")
     if not df_ventas.empty:
-        pedido_id = st.selectbox("📦 Selecciona el número de pedido a eliminar", df_ventas["# de pedido"].tolist())
+        df_ventas["DETALLE"] = df_ventas.apply(
+            lambda row: f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}", axis=1
+        )
+        venta_seleccionada = st.selectbox("📦 Selecciona una venta para eliminar", df_ventas["DETALLE"].tolist())
+        pedido_id = int(venta_seleccionada.split(" ")[0][1:])  # Extraer número de pedido
+
         if st.button("❌ Eliminar venta"):
             df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
             df_ventas.to_excel(archivo_ventas, index=False)
-            st.success(f"✅ Venta #{pedido_id} eliminada correctamente.")
-
-# ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
-elif menu == "Actualizar/Eliminar Cliente":
-    st.header("🔁 Actualizar o Eliminar Cliente")
-    if not df_clientes.empty:
-        seleccion = st.selectbox("👤 Selecciona un cliente", df_clientes["NOMBRE Y APELLIDO COMPLETO"])
-        datos = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion].iloc[0]
-
-        with st.form("form_update"):
-            nombre = st.text_input("Nombre", value=datos["NOMBRE Y APELLIDO COMPLETO"])
-            tipo = st.selectbox("Tipo de documento", ["CC", "TI"], index=0 if datos["TIPO(1)"] == "CC" else 1)
-            numero = st.text_input("Número", value=datos["NUMERO"])
-            telefono = st.text_input("Teléfono", value=datos["TELEFONO CONTACTO"])
-            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRRECCION"])
-            comuna = st.text_input("Comuna", value=datos["COMUNA"])
-            enviar = st.form_submit_button("💾 Actualizar cliente")
-
-        if enviar:
-            df_clientes.loc[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion, [
-                "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO", "TELEFONO CONTACTO",
-                "BARRIO Y/O DIRRECCION", "COMUNA"
-            ]] = [nombre, tipo, numero, telefono, barrio, comuna]
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente actualizado correctamente.")
-
-        if st.button("🗑️ Eliminar cliente"):
-            df_clientes = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] != seleccion]
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente eliminado correctamente.")
+            st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
 
 # ---------- PREMIOS ----------
 elif menu == "Premios":
     st.header("🎁 Premios por Almuerzos Comprados")
+    
     if not df_ventas.empty:
-        # Asegurar consistencia en la columna "Cliente"
+        # 👇 asegurarse de que exista la columna Cliente
         if "Cliente" not in df_ventas.columns:
             st.error("❌ No se encuentra la columna 'Cliente' en el archivo de ventas.")
         else:
@@ -168,9 +150,12 @@ elif menu == "Premios":
             resumen["Almuerzos Comprados"] = resumen["Cantidad"]
             resumen["Premios Ganados 🏆"] = resumen["Almuerzos Comprados"] // 30
             resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados 🏆"]]
+
+            st.success("🎉 Aquí puedes ver quién ha ganado premios por fidelidad.")
             st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
     else:
         st.warning("⚠️ No hay ventas registradas aún.")
+
 
 # ---------- RESUMEN DE VENTAS ----------
 elif menu == "Resumen de Ventas":
