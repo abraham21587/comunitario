@@ -114,20 +114,26 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
 
-    # ---------- ELIMINAR VENTA ----------
+   # ---------- ELIMINAR VENTA ----------
     st.markdown("---")
     st.subheader("🗑️ Eliminar una venta")
-    if not df_ventas.empty:
-        df_ventas["DETALLE"] = df_ventas.apply(
-            lambda row: f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}", axis=1
-        )
-        venta_seleccionada = st.selectbox("📦 Selecciona una venta para eliminar", df_ventas["DETALLE"].tolist())
-        pedido_id = int(venta_seleccionada.split(" ")[0][1:])  # Extraer número de pedido
 
-        if st.button("❌ Eliminar venta"):
-            df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
-            df_ventas.to_excel(archivo_ventas, index=False)
-            st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+    if not df_ventas.empty:
+        # Crear lista de opciones con detalles
+        opciones_ventas = [
+            f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}"
+            for _, row in df_ventas.iterrows()
+        ]
+        opcion = st.selectbox("📦 Selecciona una venta para eliminar", opciones_ventas)
+
+        # Obtener el número de pedido desde el texto
+        if opcion:
+            pedido_id = int(opcion.split("-")[0].replace("#", "").strip())
+
+            if st.button("❌ Eliminar venta seleccionada"):
+                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
+                df_ventas.to_excel(archivo_ventas, index=False)
+                st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
 
 # ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
 elif menu == "Actualizar/Eliminar Cliente":
