@@ -33,9 +33,6 @@ else:
 
 # Configurar página
 st.set_page_config(page_title="🥘 Cajero Surtitienda Comunitaria", layout="centered")
-st.markdown("## 🛒 Bienvenido a la Surtitienda Comunitaria")
-
-# Menú lateral
 menu = st.sidebar.radio("📋 Menú", [
     "Registrar Venta", "Registrar Cliente", 
     "Actualizar/Eliminar Cliente", "Premios", "Resumen de Ventas"
@@ -43,7 +40,7 @@ menu = st.sidebar.radio("📋 Menú", [
 
 # ---------- REGISTRAR CLIENTE ----------
 if menu == "Registrar Cliente":
-    st.header("🧾 Registro de Clientes")
+    st.title("🧾 Registro de Clientes")
     with st.form("form_cliente"):
         nombre = st.text_input("👤 Nombre y apellido completo") or "N/A"
         tipo = st.selectbox("🆔 Tipo de documento", ["CC", "TI"])
@@ -79,7 +76,7 @@ if menu == "Registrar Cliente":
 
 # ---------- REGISTRAR VENTA ----------
 elif menu == "Registrar Venta":
-    st.header("🧾 Registrar Venta")
+    st.title("🧾 Registrar Venta")
     opciones_clientes = df_clientes["NOMBRE Y APELLIDO COMPLETO"].dropna().tolist()
     cliente = st.selectbox("👤 Selecciona cliente", opciones_clientes) if opciones_clientes else None
 
@@ -99,7 +96,7 @@ elif menu == "Registrar Venta":
             nueva_venta = pd.DataFrame([{
                 "# de pedido": nuevo_pedido,
                 "Fecha": datetime.now().strftime("%Y-%m-%d"),
-                "Cliente": cliente,  # 👈 asegurar columna Cliente
+                "Cliente": cliente,
                 "Vendedor": vendedor,
                 "Producto": "Almuerzo",
                 "Cantidad": cantidad,
@@ -107,11 +104,6 @@ elif menu == "Registrar Venta":
                 "PagoCon": pago,
                 "Devuelta": devuelta
             }])
-
-            # 👇 si por algún motivo no existe la columna Cliente, la creamos
-            if "Cliente" not in df_ventas.columns:
-                df_ventas["Cliente"] = ""
-
             df_ventas = pd.concat([df_ventas, nueva_venta], ignore_index=True)
             df_ventas.to_excel(archivo_ventas, index=False)
 
@@ -137,44 +129,65 @@ elif menu == "Registrar Venta":
             df_ventas.to_excel(archivo_ventas, index=False)
             st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
 
+# ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
+elif menu == "Actualizar/Eliminar Cliente":
+    st.title("🔁 Actualizar o Eliminar Cliente")
+    if not df_clientes.empty:
+        seleccion = st.selectbox("👤 Selecciona un cliente", df_clientes["NOMBRE Y APELLIDO COMPLETO"])
+        datos = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion].iloc[0]
+
+        with st.form("form_update"):
+            nombre = st.text_input("Nombre", value=datos["NOMBRE Y APELLIDO COMPLETO"])
+            tipo = st.selectbox("Tipo de documento", ["CC", "TI"], index=0 if datos["TIPO(1)"] == "CC" else 1)
+            numero = st.text_input("Número", value=datos["NUMERO"])
+            telefono = st.text_input("Teléfono", value=datos["TELEFONO CONTACTO"])
+            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRRECCION"])
+            comuna = st.text_input("Comuna", value=datos["COMUNA"])
+            enviar = st.form_submit_button("💾 Actualizar cliente")
+
+        if enviar:
+            df_clientes.loc[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion, [
+                "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO", "TELEFONO CONTACTO",
+                "BARRIO Y/O DIRRECCION", "COMUNA"
+            ]] = [nombre, tipo, numero, telefono, barrio, comuna]
+            df_clientes.to_excel(archivo_clientes, index=False)
+            st.success("✅ Cliente actualizado correctamente.")
+
+        if st.button("🗑️ Eliminar cliente"):
+            df_clientes = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] != seleccion]
+            df_clientes.to_excel(archivo_clientes, index=False)
+            st.success("✅ Cliente eliminado correctamente.")
+
 # ---------- PREMIOS ----------
 elif menu == "Premios":
-    st.header("🎁 Premios por Almuerzos Comprados")
+    st.title("🎁 Premios por Almuerzos Comprados")
     
     if not df_ventas.empty:
-        # 👇 asegurarse de que exista la columna Cliente
         if "Cliente" not in df_ventas.columns:
-            st.error("❌ No se encuentra la columna 'Cliente' en el archivo de ventas.")
+            st.error("❌ El archivo de ventas no contiene la columna 'Cliente'. No se puede calcular premios.")
         else:
             resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
             resumen["Almuerzos Comprados"] = resumen["Cantidad"]
             resumen["Premios Ganados 🏆"] = resumen["Almuerzos Comprados"] // 30
             resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados 🏆"]]
-
-            st.success("🎉 Aquí puedes ver quién ha ganado premios por fidelidad.")
             st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
     else:
         st.warning("⚠️ No hay ventas registradas aún.")
 
-
 # ---------- RESUMEN DE VENTAS ----------
 elif menu == "Resumen de Ventas":
-    st.header("📊 Resumen de Ventas")
-    if not df_ventas.empty:
-        st.dataframe(df_ventas)
+    st.title("📊 Resumen de Ventas")
+    st.dataframe(df_ventas)
 
-        if "Fecha" in df_ventas.columns:
-            df_ventas["Fecha"] = pd.to_datetime(df_ventas["Fecha"], errors='coerce')
-            ventas_por_dia = df_ventas.groupby(df_ventas["Fecha"].dt.date)["Total"].sum()
+    if "Fecha" in df_ventas.columns:
+        df_ventas["Fecha"] = pd.to_datetime(df_ventas["Fecha"], errors='coerce')
+        ventas_por_dia = df_ventas.groupby(df_ventas["Fecha"].dt.date)["Total"].sum()
 
-            st.subheader("📈 Ventas por día")
-            st.line_chart(ventas_por_dia)
+        st.subheader("📈 Ventas por día")
+        st.line_chart(ventas_por_dia)
 
-            if not ventas_por_dia.empty:
-                dia_max = ventas_por_dia.idxmax()
-                dia_min = ventas_por_dia.idxmin()
-                st.success(f"📅 Día con más ventas: **{dia_max}** - 💰 ${ventas_por_dia.max():,.0f}")
-                st.info(f"📅 Día con menos ventas: **{dia_min}** - 💸 ${ventas_por_dia.min():,.0f}")
-    else:
-        st.warning("⚠️ No hay datos de ventas todavía.")
-
+        if not ventas_por_dia.empty:
+            dia_max = ventas_por_dia.idxmax()
+            dia_min = ventas_por_dia.idxmin()
+            st.success(f"📅 Día con más ventas: **{dia_max}** - 💰 ${ventas_por_dia.max():,.0f}")
+            st.info(f"📅 Día con menos ventas: **{dia_min}** - 💸 ${ventas_por_dia.min():,.0f}")
