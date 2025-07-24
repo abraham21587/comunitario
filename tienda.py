@@ -124,18 +124,24 @@ elif menu == "Registrar Venta":
             df_ventas.to_excel(archivo_ventas, index=False)
             st.success(f"Venta con pedido #{pedido_id} eliminada correctamente.")
 
-# Premios
+# === PREMIOS ===
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
-    if "Cliente" in df_ventas.columns:
-        resumen = df_ventas.groupby("Cliente")["Cantidad"].sum().reset_index()
+
+    # Verificamos que la columna Cliente exista (independiente del nombre original)
+    columnas_ventas = df_ventas.columns.str.lower()
+    if "cliente" in columnas_ventas and "cantidad" in columnas_ventas:
+        col_cliente = [c for c in df_ventas.columns if c.lower() == "cliente"][0]
+        col_cantidad = [c for c in df_ventas.columns if c.lower() == "cantidad"][0]
+
+        resumen = df_ventas.groupby(col_cliente)[col_cantidad].sum().reset_index()
+        resumen.rename(columns={col_cliente: "Cliente", col_cantidad: "Almuerzos Comprados"}, inplace=True)
+        resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
+        resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]]
+
+        st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
     else:
-        resumen = df_ventas.groupby("cliente")["Cantidad"].sum().reset_index()
-        resumen.rename(columns={"cliente": "Cliente"}, inplace=True)
-    resumen["Almuerzos Comprados"] = resumen["Cantidad"]
-    resumen["Premios Ganados"] = resumen["Almuerzos Comprados"] // 30
-    resumen = resumen[["Cliente", "Almuerzos Comprados", "Premios Ganados"]]
-    st.dataframe(resumen.sort_values(by="Almuerzos Comprados", ascending=False))
+        st.warning("❗ No se encontraron columnas 'Cliente' y 'Cantidad' en las ventas.")
 
 # ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
 elif menu == "Actualizar/Eliminar Cliente":
