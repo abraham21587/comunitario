@@ -1,4 +1,4 @@
-# Surtitienda Comunitaria - App Mejorada (con correcciones)
+# Surtitienda Comunitaria - App Mejorada (con racha de asistencia)
 
 import streamlit as st
 import pandas as pd
@@ -173,31 +173,28 @@ elif menu == "Resumen de Ventas":
 
 # === PREMIOS ===
 elif menu == "Premios 🎁":
-    st.title("🎁 Clientes Premiados por Asistencia Consecutiva")
+    st.title("🔥 Racha de asistencia diaria (TikTok style)")
 
-    def dias_consecutivos(lista_fechas):
-        fechas = sorted([datetime.strptime(str(f), "%Y-%m-%d") for f in lista_fechas])
-        max_consec = actual = 1
-        for i in range(1, len(fechas)):
-            if (fechas[i] - fechas[i-1]).days == 1:
-                actual += 1
-                max_consec = max(max_consec, actual)
+    def calcular_racha(fechas):
+        if not fechas:
+            return 0
+        fechas_ordenadas = sorted([datetime.strptime(str(f), "%Y-%m-%d") for f in fechas])
+        max_racha = racha_actual = 1
+        for i in range(1, len(fechas_ordenadas)):
+            if (fechas_ordenadas[i] - fechas_ordenadas[i-1]).days == 1:
+                racha_actual += 1
+                max_racha = max(max_racha, racha_actual)
             else:
-                actual = 1
-        return max_consec
+                racha_actual = 1
+        return max_racha
 
-    premiados = []
+    resultados = []
     for cliente in df_clientes["NOMBRE Y APELLIDO COMPLETO"]:
         fechas_cliente = df_ventas[df_ventas["Cliente"] == cliente]["Fecha"].tolist()
-        if len(fechas_cliente) >= 15:
-            consecutivos = dias_consecutivos(fechas_cliente)
-            if consecutivos >= 15:
-                premiados.append((cliente, consecutivos))
+        racha = calcular_racha(fechas_cliente)
+        resultados.append((cliente, racha))
 
-    premiados.sort(key=lambda x: x[1], reverse=True)
-
-    if premiados:
-        st.dataframe(pd.DataFrame(premiados, columns=["Cliente", "Días consecutivos"]))
-    else:
-        st.info("Ningún cliente ha asistido 15 días consecutivos aún.")
+    resultados_ordenados = sorted(resultados, key=lambda x: x[1], reverse=True)
+    df_rachas = pd.DataFrame(resultados_ordenados, columns=["Cliente", "Días consecutivos"])
+    st.dataframe(df_rachas)
 
