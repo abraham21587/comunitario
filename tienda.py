@@ -114,37 +114,38 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
 
-    # ---------- ELIMINAR VENTA ----------
+      # ---------- ELIMINAR VENTA ----------
     st.markdown("---")
     st.subheader("🗑️ Eliminar una venta")
 
     if not df_ventas.empty:
-        # Mostrar opciones con información resumida
-        opciones_ventas = [
-            f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}"
-            for _, row in df_ventas.iterrows()
-        ]
-        opcion = st.selectbox("📦 Selecciona una venta para eliminar", opciones_ventas)
+        if "Cliente" in df_ventas.columns:
+            opciones_ventas = [
+                f"#{row['# de pedido']} - {row['Cliente']} ({row['Fecha']}) x{row['Cantidad']}"
+                for _, row in df_ventas.iterrows()
+            ]
+            opcion = st.selectbox("📦 Selecciona una venta para eliminar", opciones_ventas)
 
-        # Obtener número de pedido desde el texto
-        if opcion:
-            pedido_id = int(opcion.split("-")[0].replace("#", "").strip())
-            venta_detalle = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
+            if opcion:
+                pedido_id = int(opcion.split("-")[0].replace("#", "").strip())
+                venta_detalle = df_ventas[df_ventas["# de pedido"] == pedido_id].iloc[0]
 
-            st.markdown("### 🧾 Detalles de la venta seleccionada")
-            st.markdown(f"**Cliente:** {venta_detalle['Cliente']}")
-            st.markdown(f"**Fecha:** {venta_detalle['Fecha']}")
-            st.markdown(f"**Vendedor:** {venta_detalle['Vendedor']}")
-            st.markdown(f"**Producto:** {venta_detalle['Producto']}")
-            st.markdown(f"**Cantidad:** {venta_detalle['Cantidad']}")
-            st.markdown(f"**Total:** ${venta_detalle['Total']:,.0f}")
-            st.markdown(f"**Pagó con:** ${venta_detalle['PagoCon']:,.0f}")
-            st.markdown(f"**Devuelta:** ${venta_detalle['Devuelta']:,.0f}")
+                st.markdown("### 🧾 Detalles de la venta seleccionada")
+                st.markdown(f"**Cliente:** {venta_detalle['Cliente']}")
+                st.markdown(f"**Fecha:** {venta_detalle['Fecha']}")
+                st.markdown(f"**Vendedor:** {venta_detalle['Vendedor']}")
+                st.markdown(f"**Producto:** {venta_detalle['Producto']}")
+                st.markdown(f"**Cantidad:** {venta_detalle['Cantidad']}")
+                st.markdown(f"**Total:** ${venta_detalle['Total']:,.0f}")
+                st.markdown(f"**Pagó con:** ${venta_detalle['PagoCon']:,.0f}")
+                st.markdown(f"**Devuelta:** ${venta_detalle['Devuelta']:,.0f}")
 
-            if st.button("❌ Eliminar venta seleccionada"):
-                df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
-                df_ventas.to_excel(archivo_ventas, index=False)
-                st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+                if st.button("❌ Eliminar venta seleccionada"):
+                    df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
+                    df_ventas.to_excel(archivo_ventas, index=False)
+                    st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+        else:
+            st.error("❌ La columna 'Cliente' no existe en el archivo de ventas. No se pueden mostrar ni eliminar ventas.")
 
 # ---------- ACTUALIZAR / ELIMINAR CLIENTE ----------
 elif menu == "Actualizar/Eliminar Cliente":
