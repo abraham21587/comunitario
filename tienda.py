@@ -52,10 +52,11 @@ if menu == "Registrar Cliente":
 
     if enviar:
         duplicado = (
-            nombre.strip().lower() in df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.lower().values
-            or numero.strip() in df_clientes["NUMERO"].astype(str).values
-            or telefono.strip() in df_clientes["TELEFONO CONTACTO"].astype(str).values
-        )
+            df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.lower().str.strip().eq(nombre.strip().lower()).any()
+            or df_clientes["NUMERO"].astype(str).eq(numero.strip()).any()
+            or df_clientes["TELEFONO CONTACTO"].astype(str).eq(telefono.strip()).any()
+)
+
         if duplicado:
             st.error("⚠️ Cliente ya registrado.")
         else:
@@ -119,10 +120,11 @@ elif menu == "Registrar Venta":
     st.subheader("Eliminar una venta")
     if not df_ventas.empty:
         pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", df_ventas["# de pedido"].tolist())
-        if st.button("Eliminar venta"):
-            df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
-            df_ventas.to_excel(archivo_ventas, index=False)
-            st.success(f"Venta con pedido #{pedido_id} eliminada correctamente.")
+        if st.button("🗑️ Eliminar cliente"):
+            cliente_id = datos["ID"]
+            df_clientes = df_clientes[df_clientes["ID"] != cliente_id]
+            df_clientes.to_excel(archivo_clientes, index=False)
+            st.success(f"✅ Cliente con ID {cliente_id} eliminado correctamente.")
 
 # === PREMIOS ===
 elif menu == "Premios":
