@@ -55,8 +55,7 @@ if menu == "Registrar Cliente":
             df_clientes["NOMBRE Y APELLIDO COMPLETO"].str.lower().str.strip().eq(nombre.strip().lower()).any()
             or df_clientes["NUMERO"].astype(str).eq(numero.strip()).any()
             or df_clientes["TELEFONO CONTACTO"].astype(str).eq(telefono.strip()).any()
-)
-
+        )
         if duplicado:
             st.error("⚠️ Cliente ya registrado.")
         else:
@@ -115,22 +114,26 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
 
-  # Eliminar venta
+    # Eliminar venta
     st.markdown("---")
     st.subheader("Eliminar una venta")
     if not df_ventas.empty:
         pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", df_ventas["# de pedido"].tolist())
-        if st.button("🗑️ Eliminar cliente"):
-            cliente_id = datos["ID"]
-            df_clientes = df_clientes[df_clientes["ID"] != cliente_id]
-            df_clientes.to_excel(archivo_clientes, index=False)
-            st.success(f"✅ Cliente con ID {cliente_id} eliminado correctamente.")
+        if st.button("Eliminar venta"):
+            # Restar 1 al contador de "DIAS QUE VINO"
+            cliente_eliminado = df_ventas[df_ventas["# de pedido"] == pedido_id]["Cliente"].values[0]
+            idx_cliente = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_eliminado].index
+            if not idx_cliente.empty:
+                df_clientes.loc[idx_cliente, "DIAS QUE VINO"] = df_clientes.loc[idx_cliente, "DIAS QUE VINO"] - 1
+                df_clientes.to_excel(archivo_clientes, index=False)
+
+            df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
+            df_ventas.to_excel(archivo_ventas, index=False)
+            st.success(f"Venta con pedido #{pedido_id} eliminada correctamente.")
 
 # === PREMIOS ===
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
-
-    # Verificamos que la columna Cliente exista (independiente del nombre original)
     columnas_ventas = df_ventas.columns.str.lower()
     if "cliente" in columnas_ventas and "cantidad" in columnas_ventas:
         col_cliente = [c for c in df_ventas.columns if c.lower() == "cliente"][0]
@@ -162,7 +165,7 @@ elif menu == "Actualizar/Eliminar Cliente":
             enviar = st.form_submit_button("📂 Actualizar cliente")
 
         if enviar:
-            df_clientes.loc[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == seleccion, [
+            df_clientes.loc[df_clientes["ID"] == datos["ID"], [
                 "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO", "TELEFONO CONTACTO",
                 "BARRIO Y/O DIRRECCION", "COMUNA"
             ]] = [nombre, tipo, numero, telefono, barrio, comuna]
@@ -170,9 +173,9 @@ elif menu == "Actualizar/Eliminar Cliente":
             st.success("✅ Cliente actualizado correctamente.")
 
         if st.button("🗑️ Eliminar cliente"):
-            df_clientes = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] != seleccion]
+            df_clientes = df_clientes[df_clientes["ID"] != datos["ID"]]
             df_clientes.to_excel(archivo_clientes, index=False)
-            st.success("✅ Cliente eliminado correctamente.")
+            st.success(f"✅ Cliente con ID {datos['ID']} eliminado correctamente.")
 
 # ---------- RESUMEN DE VENTAS ----------
 elif menu == "Resumen de Ventas":
