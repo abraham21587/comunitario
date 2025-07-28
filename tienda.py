@@ -162,14 +162,14 @@ elif menu == "Actualizar/Eliminar Cliente":
             tipo = st.selectbox("Tipo de documento", ["CC", "TI"], index=0 if datos["TIPO(1)"] == "CC" else 1)
             numero = st.text_input("Número", value=datos["NUMERO"])
             telefono = st.text_input("Teléfono", value=datos["TELEFONO CONTACTO"])
-            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRECCION"])
+            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRRECCION"])
             comuna = st.text_input("Comuna", value=datos["COMUNA"])
             enviar = st.form_submit_button("📂 Actualizar cliente")
 
         if enviar:
             df_clientes.loc[df_clientes["ID"] == datos["ID"], [
                 "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO", "TELEFONO CONTACTO",
-                "BARRIO Y/O DIRECCION", "COMUNA"
+                "BARRIO Y/O DIRRECCION", "COMUNA"
             ]] = [nombre, tipo, numero, telefono, barrio, comuna]
             df_clientes.to_excel(archivo_clientes, index=False)
             st.success("✅ Cliente actualizado correctamente.")
