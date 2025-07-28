@@ -8,10 +8,14 @@ import os
 archivo_ventas = "ventas.xlsx"
 archivo_clientes = "clientes.xlsx"
 
-# Columnas esperadas en clientes
+# Columnas esperadas
 columnas_clientes = [
     "ID", "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO",
-    "TELEFONO CONTACTO", "BARRIO Y/O DIRRECCION", "COMUNA", "DIAS QUE VINO"
+    "TELEFONO CONTACTO", "BARRIO Y/O DIRECCION", "COMUNA", "DIAS QUE VINO"
+]
+columnas_ventas = [
+    "# de pedido", "Fecha", "Cliente", "Vendedor",
+    "Producto", "Cantidad", "Total", "PagoCon", "Devuelta"
 ]
 
 # Configurar página
@@ -21,14 +25,7 @@ menu = st.sidebar.radio("📋 Menú", [
     "Actualizar/Eliminar Cliente", "Premios", "Resumen de Ventas"
 ])
 
-
-
-# Crear archivo de clientes si no existe
-if not os.path.exists(archivo_clientes):
-    df_clientes = pd.DataFrame(columns=columnas_clientes)
-    df_clientes.to_excel(archivo_clientes, index=False)
-else:
-    df_clientes = pd.read_excel(archivo_clientes)
+# Crear o cargar archivo de clientes
 
 
 # ---------- REGISTRAR CLIENTE ----------
@@ -59,7 +56,7 @@ if menu == "Registrar Cliente":
                 "TIPO(1)": tipo,
                 "NUMERO": numero,
                 "TELEFONO CONTACTO": telefono,
-                "BARRIO Y/O DIRRECCION": barrio,
+                "BARRIO Y/O DIRECCION": barrio,
                 "COMUNA": comuna,
                 "DIAS QUE VINO": 0
             }])
@@ -106,17 +103,25 @@ elif menu == "Registrar Venta":
                 df_clientes.to_excel(archivo_clientes, index=False)
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
-  # Eliminar venta
+
+    # Eliminar venta
     st.markdown("---")
-    st.subheader("Eliminar una venta")
+    st.subheader("🗑️ Eliminar una venta")
     if not df_ventas.empty:
-        pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", df_ventas["# de pedido"].tolist())
+        pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", sorted(df_ventas["# de pedido"].tolist()))
         if st.button("Eliminar venta"):
+            cliente_pedido = df_ventas.loc[df_ventas["# de pedido"] == pedido_id, "Cliente"].values[0]
             df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
             df_ventas.to_excel(archivo_ventas, index=False)
-            st.success(f"Venta con pedido #{pedido_id} eliminada correctamente.")
 
-# === PREMIOS ===
+            idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_pedido].index
+            if not idx.empty:
+                df_clientes.loc[idx, "DIAS QUE VINO"] = (df_clientes.loc[idx, "DIAS QUE VINO"] - 1).clip(lower=0)
+                df_clientes.to_excel(archivo_clientes, index=False)
+
+            st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+
+# ---------- PREMIOS ----------
 elif menu == "Premios":
     st.title("🎁 Premios por Almuerzos Comprados")
     columnas_ventas = df_ventas.columns.str.lower()
@@ -145,14 +150,14 @@ elif menu == "Actualizar/Eliminar Cliente":
             tipo = st.selectbox("Tipo de documento", ["CC", "TI"], index=0 if datos["TIPO(1)"] == "CC" else 1)
             numero = st.text_input("Número", value=datos["NUMERO"])
             telefono = st.text_input("Teléfono", value=datos["TELEFONO CONTACTO"])
-            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRRECCION"])
+            barrio = st.text_input("Barrio", value=datos["BARRIO Y/O DIRECCION"])
             comuna = st.text_input("Comuna", value=datos["COMUNA"])
             enviar = st.form_submit_button("📂 Actualizar cliente")
 
         if enviar:
             df_clientes.loc[df_clientes["ID"] == datos["ID"], [
                 "NOMBRE Y APELLIDO COMPLETO", "TIPO(1)", "NUMERO", "TELEFONO CONTACTO",
-                "BARRIO Y/O DIRRECCION", "COMUNA"
+                "BARRIO Y/O DIRECCION", "COMUNA"
             ]] = [nombre, tipo, numero, telefono, barrio, comuna]
             df_clientes.to_excel(archivo_clientes, index=False)
             st.success("✅ Cliente actualizado correctamente.")
@@ -179,3 +184,4 @@ elif menu == "Resumen de Ventas":
             dia_min = ventas_por_dia.idxmin()
             st.success(f"📅 Día con más ventas: **{dia_max}** - 💰 ${ventas_por_dia.max():,.0f}")
             st.info(f"📅 Día con menos ventas: **{dia_min}** - 💸 ${ventas_por_dia.min():,.0f}")
+
