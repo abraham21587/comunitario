@@ -3,7 +3,15 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import gspread
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
+from google.oauth2.service_account import Credentials
 
+def conectar_google_sheets():
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(creds_dict)
+    client = gspread.authorize(creds)
+    return client
 # Archivos
 archivo_ventas = "ventas.xlsx"
 archivo_clientes = "clientes.xlsx"
