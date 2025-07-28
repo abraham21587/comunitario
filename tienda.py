@@ -116,22 +116,15 @@ elif menu == "Registrar Venta":
 
             st.success(f"✅ Venta registrada exitosamente para **{cliente}**.")
 
-    # Eliminar venta
+  # Eliminar venta
     st.markdown("---")
-    st.subheader("🗑️ Eliminar una venta")
+    st.subheader("Eliminar una venta")
     if not df_ventas.empty:
-        pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", sorted(df_ventas["# de pedido"].tolist()))
+        pedido_id = st.selectbox("Selecciona el número de pedido a eliminar", df_ventas["# de pedido"].tolist())
         if st.button("Eliminar venta"):
-            cliente_pedido = df_ventas.loc[df_ventas["# de pedido"] == pedido_id, "Cliente"].values[0]
             df_ventas = df_ventas[df_ventas["# de pedido"] != pedido_id]
             df_ventas.to_excel(archivo_ventas, index=False)
-
-            idx = df_clientes[df_clientes["NOMBRE Y APELLIDO COMPLETO"] == cliente_pedido].index
-            if not idx.empty:
-                df_clientes.loc[idx, "DIAS QUE VINO"] = (df_clientes.loc[idx, "DIAS QUE VINO"] - 1).clip(lower=0)
-                df_clientes.to_excel(archivo_clientes, index=False)
-
-            st.success(f"✅ Venta con pedido #{pedido_id} eliminada correctamente.")
+            st.success(f"Venta con pedido #{pedido_id} eliminada correctamente.")
 
 # ---------- PREMIOS ----------
 elif menu == "Premios":
