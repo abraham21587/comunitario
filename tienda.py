@@ -14,23 +14,6 @@ columnas_clientes = [
     "TELEFONO CONTACTO", "BARRIO Y/O DIRRECCION", "COMUNA", "DIAS QUE VINO"
 ]
 
-# Crear archivo de ventas si no existe
-if not os.path.exists(archivo_ventas):
-    df_ventas = pd.DataFrame(columns=[
-        "# de pedido", "Fecha", "Cliente", "Vendedor", "Producto",
-        "Cantidad", "Total", "PagoCon", "Devuelta"
-    ])
-    df_ventas.to_excel(archivo_ventas, index=False)
-else:
-    df_ventas = pd.read_excel(archivo_ventas)
-
-# Crear archivo de clientes si no existe
-if not os.path.exists(archivo_clientes):
-    df_clientes = pd.DataFrame(columns=columnas_clientes)
-    df_clientes.to_excel(archivo_clientes, index=False)
-else:
-    df_clientes = pd.read_excel(archivo_clientes)
-
 # Configurar página
 st.set_page_config(page_title="🥘 Cajero Surtitienda Comunitaria", layout="centered")
 menu = st.sidebar.radio("📋 Menú", [
