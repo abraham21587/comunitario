@@ -26,6 +26,18 @@ menu = st.sidebar.radio("📋 Menú", [
 ])
 
 # Crear o cargar archivo de clientes
+if not os.path.exists(archivo_clientes):
+    df_clientes = pd.DataFrame(columns=columnas_clientes)
+    df_clientes.to_excel(archivo_clientes, index=False)
+else:
+    df_clientes = pd.read_excel(archivo_clientes)
+
+# Crear o cargar archivo de ventas
+if not os.path.exists(archivo_ventas):
+    df_ventas = pd.DataFrame(columns=columnas_ventas)
+    df_ventas.to_excel(archivo_ventas, index=False)
+else:
+    df_ventas = pd.read_excel(archivo_ventas)
 
 
 # ---------- REGISTRAR CLIENTE ----------
