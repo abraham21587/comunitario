@@ -21,6 +21,16 @@ menu = st.sidebar.radio("📋 Menú", [
     "Actualizar/Eliminar Cliente", "Premios", "Resumen de Ventas"
 ])
 
+
+
+# Crear archivo de clientes si no existe
+if not os.path.exists(archivo_clientes):
+    df_clientes = pd.DataFrame(columns=columnas_clientes)
+    df_clientes.to_excel(archivo_clientes, index=False)
+else:
+    df_clientes = pd.read_excel(archivo_clientes)
+
+
 # ---------- REGISTRAR CLIENTE ----------
 if menu == "Registrar Cliente":
     st.title("📟 Registro de Clientes")
